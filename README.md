@@ -75,8 +75,54 @@ Dialysis_Dashboard/
 
 ---
 
-## 📌 Clinical Logic & Assumptions
+---
 
-1. **Weight Gain**: `((preWeight - dryWeight) / dryWeight) * 100 > 5%`.
-2. **Hypertension**: Systolic BP > 160 mmHg post-treatment.
-3. **Session Integrity**: Ideal clearance achieved between 180 and 300 minutes.
+## ✅ Project Deliverables
+
+- [x] **Running Service**: Full-stack API and UI active.
+- [x] **Seed Script**: Integrated `npm run seed` to populate mock patients.
+- [x] **Architecture Overview**: Detailed in the "Project Architecture" section above.
+- [/] **API Documentation**: Markdown-based documentation available (see below).
+- [ ] **Tests**:
+    - [ ] Core business logic (anomaly detection).
+    - [ ] API route validation.
+    - [ ] UI component unit test.
+
+---
+
+## 🚀 Deployment Guide (Vercel)
+
+This project is structured as a monorepo. For the best experience, we recommend deploying the **Frontend to Vercel** and the **Backend to Render/Railways**.
+
+### Deploying Frontend to Vercel
+1. Push your code to GitHub.
+2. Go to [Vercel](https://vercel.com) and click **"Add New Project"**.
+3. Import this repository.
+4. Set the **Root Directory** to `frontend`.
+5. Add an Environment Variable:
+   - `VITE_API_URL`: Your deployed backend URL (e.g., `https://your-api.onrender.com/api`).
+6. Click **Deploy**.
+
+### Deploying Backend (Recommended: Render)
+1. Go to [Render.com](https://render.com).
+2. Create a new **Web Service**.
+3. Set the **Root Directory** to `backend`.
+4. Build Command: `npm install && npm run build` (if using build) or just `npm install`.
+5. Start Command: `npm run dev` (or `node dist/index.js` if built).
+6. Add Environment Variables:
+   - `MONGO_URI`: Your MongoDB connection string.
+   - `PORT`: 5000.
+
+---
+
+## 📖 API Documentation
+
+### Patients
+- `GET /api/patients` - Fetch all patients.
+- `POST /api/patients` - Register a new patient.
+- `DELETE /api/patients/:id` - Remove a patient.
+
+### Sessions
+- `GET /api/sessions/schedule?date=YYYY-MM-DD` - Fetch sessions for a specific date.
+- `POST /api/sessions` - Start/Record a new session.
+- `PATCH /api/sessions/:id` - Update an existing session record.
