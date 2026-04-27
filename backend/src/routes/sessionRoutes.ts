@@ -7,32 +7,44 @@ import mongoose from "mongoose";
 
 const router = express.Router();
 
-const SessionInputSchema = z.object({
+const RawSessionSchema = z.object({
   patientId: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), "Invalid patientId"),
   startTime: z.preprocess((arg) => (typeof arg === "string" ? new Date(arg) : arg), z.date()),
   endTime: z.preprocess((arg) => (arg === "" || arg === null ? null : typeof arg === "string" ? new Date(arg) : arg), z.date().nullable().optional()),
-  preWeight: z.preprocess((arg: any, ctx) => {
-    const val = arg ?? ctx.data?.preweight;
-    return val === "" ? undefined : Number(val);
-  }, z.number().positive()),
-  postWeight: z.preprocess((arg: any, ctx) => {
-    const val = arg ?? ctx.data?.postweight;
-    return (val === "" || val === null) ? null : Number(val);
-  }, z.number().positive().nullable().optional()),
-  systolicBp: z.preprocess((arg: any, ctx) => {
-    const val = arg ?? ctx.data?.systolicbp;
-    return (val === "" || val === null) ? null : Number(val);
-  }, z.number().positive().nullable().optional()),
-  diastolicBp: z.preprocess((arg: any, ctx) => {
-    const val = arg ?? ctx.data?.diastolicbp;
-    return (val === "" || val === null) ? null : Number(val);
-  }, z.number().positive().nullable().optional()),
-  machineId: z.preprocess((arg: any, ctx) => arg ?? ctx.data?.machineid, z.string().min(1, "Machine ID is required")),
-  nurseNotes: z.preprocess((arg: any, ctx) => arg ?? ctx.data?.nursenotes, z.string().optional().default("")),
-  status: z.preprocess((arg: any, ctx) => arg ?? ctx.data?.status, z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED"]).default("IN_PROGRESS"))
+  preWeight: z.preprocess((val) => (val === "" ? undefined : Number(val)), z.number().positive()),
+  postWeight: z.preprocess((val) => (val === "" || val === null ? null : Number(val)), z.number().positive().nullable().optional()),
+  systolicBp: z.preprocess((val) => (val === "" || val === null ? null : Number(val)), z.number().positive().nullable().optional()),
+  diastolicBp: z.preprocess((val) => (val === "" || val === null ? null : Number(val)), z.number().positive().nullable().optional()),
+  machineId: z.string().min(1, "Machine ID is required"),
+  nurseNotes: z.string().optional().default(""),
+  status: z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED"]).default("IN_PROGRESS")
 });
 
-const SessionUpdateSchema = SessionInputSchema.partial();
+const SessionInputSchema = z.preprocess((arg: any) => {
+  if (typeof arg !== "object" || arg === null) return arg;
+  return {
+    ...arg,
+    preWeight: arg.preWeight ?? arg.preweight,
+    postWeight: arg.postWeight ?? arg.postweight,
+    systolicBp: arg.systolicBp ?? arg.systolicbp,
+    diastolicBp: arg.diastolicBp ?? arg.diastolicbp,
+    machineId: arg.machineId ?? arg.machineid,
+    nurseNotes: arg.nurseNotes ?? arg.nursenotes,
+  };
+}, RawSessionSchema);
+
+const SessionUpdateSchema = z.preprocess((arg: any) => {
+  if (typeof arg !== "object" || arg === null) return arg;
+  return {
+    ...arg,
+    preWeight: arg.preWeight ?? arg.preweight,
+    postWeight: arg.postWeight ?? arg.postweight,
+    systolicBp: arg.systolicBp ?? arg.systolicbp,
+    diastolicBp: arg.diastolicBp ?? arg.diastolicbp,
+    machineId: arg.machineId ?? arg.machineid,
+    nurseNotes: arg.nurseNotes ?? arg.nursenotes,
+  };
+}, RawSessionSchema.partial());
 
 // Record a session
 router.post("/", async (req, res) => {
