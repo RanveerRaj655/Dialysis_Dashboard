@@ -83,10 +83,10 @@ Dialysis_Dashboard/
 - [x] **Seed Script**: Integrated `npm run seed` to populate mock patients.
 - [x] **Architecture Overview**: Detailed in the "Project Architecture" section above.
 - [/] **API Documentation**: Markdown-based documentation available (see below).
-- [ ] **Tests**:
-    - [ ] Core business logic (anomaly detection).
-    - [ ] API route validation.
-    - [ ] UI component unit test.
+- [x] **Tests**:
+    - [x] Core business logic (anomaly detection).
+    - [x] API route validation.
+    - [x] UI component unit test.
 
 ---
 
