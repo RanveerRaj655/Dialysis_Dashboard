@@ -11,13 +11,25 @@ const SessionInputSchema = z.object({
   patientId: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), "Invalid patientId"),
   startTime: z.preprocess((arg) => (typeof arg === "string" ? new Date(arg) : arg), z.date()),
   endTime: z.preprocess((arg) => (arg === "" || arg === null ? null : typeof arg === "string" ? new Date(arg) : arg), z.date().nullable().optional()),
-  preWeight: z.preprocess((arg) => (arg === "" ? undefined : Number(arg)), z.number().positive()),
-  postWeight: z.preprocess((arg) => (arg === "" || arg === null ? null : Number(arg)), z.number().positive().nullable().optional()),
-  systolicBp: z.preprocess((arg) => (arg === "" || arg === null ? null : Number(arg)), z.number().positive().nullable().optional()),
-  diastolicBp: z.preprocess((arg) => (arg === "" || arg === null ? null : Number(arg)), z.number().positive().nullable().optional()),
-  machineId: z.string().min(1, "Machine ID is required"),
-  nurseNotes: z.string().optional().default(""),
-  status: z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED"]).default("IN_PROGRESS")
+  preWeight: z.preprocess((arg: any, ctx) => {
+    const val = arg ?? ctx.data?.preweight;
+    return val === "" ? undefined : Number(val);
+  }, z.number().positive()),
+  postWeight: z.preprocess((arg: any, ctx) => {
+    const val = arg ?? ctx.data?.postweight;
+    return (val === "" || val === null) ? null : Number(val);
+  }, z.number().positive().nullable().optional()),
+  systolicBp: z.preprocess((arg: any, ctx) => {
+    const val = arg ?? ctx.data?.systolicbp;
+    return (val === "" || val === null) ? null : Number(val);
+  }, z.number().positive().nullable().optional()),
+  diastolicBp: z.preprocess((arg: any, ctx) => {
+    const val = arg ?? ctx.data?.diastolicbp;
+    return (val === "" || val === null) ? null : Number(val);
+  }, z.number().positive().nullable().optional()),
+  machineId: z.preprocess((arg: any, ctx) => arg ?? ctx.data?.machineid, z.string().min(1, "Machine ID is required")),
+  nurseNotes: z.preprocess((arg: any, ctx) => arg ?? ctx.data?.nursenotes, z.string().optional().default("")),
+  status: z.preprocess((arg: any, ctx) => arg ?? ctx.data?.status, z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED"]).default("IN_PROGRESS"))
 });
 
 const SessionUpdateSchema = SessionInputSchema.partial();
@@ -58,25 +70,19 @@ router.post("/", async (req, res) => {
 // Update a session fundamentally
 router.patch("/:id", async (req, res) => {
   console.log(`\n=== BACKEND: Received PATCH on /api/sessions/${req.params.id} ===`);
-  console.log("BACKEND: Request Payload:", JSON.stringify(req.body, null, 2));
   try {
-    console.log("BACKEND: Raw body:", req.body);
     const validatedData = SessionUpdateSchema.parse(req.body);
-    console.log("BACKEND: Validated (Zod) data:", validatedData);
     
-    // 1. Get existing session
     const existingSession = await Session.findById(req.params.id);
     if (!existingSession) {
       return res.status(404).json({ error: "Session not found" });
     }
 
-    // 2. Fetch the patient instance correctly to run the rules engine
     const patient = await Patient.findById(existingSession.patientId);
     if (!patient) {
       return res.status(404).json({ error: "Patient context not found" });
     }
 
-    // 3. Re-run Anomaly detection combining existing logic overrides
     const combinedSessionData = {
       preWeight: validatedData.preWeight ?? existingSession.preWeight,
       postWeight: validatedData.postWeight !== undefined ? validatedData.postWeight : existingSession.postWeight,
@@ -85,18 +91,14 @@ router.patch("/:id", async (req, res) => {
       endTime: validatedData.endTime !== undefined ? validatedData.endTime : existingSession.endTime,
     };
 
-    console.log("BACKEND: Combined for anomalies:", combinedSessionData);
     const newAnomalies = detectAnomalies(patient, combinedSessionData);
-    console.log("BACKEND: Calculated anomalies:", newAnomalies);
 
-    // Update fields manually for .save()
     Object.assign(existingSession, validatedData);
     existingSession.anomalies = newAnomalies;
 
     const savedSession = await existingSession.save();
     const sessionToUpdate = await savedSession.populate("patientId");
 
-    console.log("BACKEND: Successfully saved to MongoDB:", sessionToUpdate);
     res.status(200).json(sessionToUpdate);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -106,40 +108,50 @@ router.patch("/:id", async (req, res) => {
     res.status(500).json({ error: "Server error updating session" });
   }
 });
+
 // Get schedule and sessions for a date
 router.get("/schedule", async (req, res) => {
   try {
-    // Support historical records via ?date=YYYY-MM-DD
-    const queryDate = req.query.date ? new Date(req.query.date as string) : new Date();
+    const queryDateStr = req.query.date as string;
+    const queryDate = queryDateStr ? new Date(queryDateStr) : new Date();
     
-    // Set up the time window for the requested date
     const startOfRange = new Date(queryDate);
     startOfRange.setHours(0, 0, 0, 0);
     
     const endOfRange = new Date(queryDate);
     endOfRange.setHours(23, 59, 59, 999);
 
-    const patients = await Patient.find().lean();
-    
-    const sessionsToday = await Session.find({
+    // Find patients registered on this day OR who have sessions on this day
+    const patientsRegisteredToday = await Patient.find({
+      createdAt: { $gte: startOfRange, $lte: endOfRange }
+    }).lean();
+
+    const sessionsInRange = await Session.find({
       startTime: { $gte: startOfRange, $lte: endOfRange }
     }).sort({ startTime: 1 }).lean();
 
-    // Map sessions to patients with extremely robust ID and Case matching
+    const patientIdsWithSessions = sessionsInRange.map(s => s.patientId.toString());
+    
+    // Get all patients who either were registered today OR have a session today
+    const patientsWithSessions = await Patient.find({
+      _id: { $in: patientIdsWithSessions }
+    }).lean();
+
+    // Union of both lists, unique by ID
+    const patientsMap = new Map();
+    patientsRegisteredToday.forEach(p => patientsMap.set(p._id.toString(), p));
+    patientsWithSessions.forEach(p => patientsMap.set(p._id.toString(), p));
+    
+    const patients = Array.from(patientsMap.values());
+
     const schedule = patients.map((patient) => {
       const patientIdStr = patient._id.toString();
-      
-      // Find sessions that match this patient, ignoring potential ID casing or type issues
-      const patientSessions = sessionsToday.filter(
-        (s) => {
-          const sPid = s.patientId || (s as any).patientid;
-          return sPid && sPid.toString() === patientIdStr;
-        }
+      const patientSessions = sessionsInRange.filter(
+        (s) => s.patientId.toString() === patientIdStr
       );
 
       const rawSession = patientSessions.length > 0 ? patientSessions[patientSessions.length - 1] : null;
       
-      // Force normalize the session object before sending to UI to fix any lowercase field issues
       let normalizedSession = null;
       if (rawSession) {
         const rs = rawSession as any;
