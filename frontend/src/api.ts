@@ -58,3 +58,8 @@ export const registerPatient = async (patientData: Partial<Patient>) => {
   const { data } = await api.post("/patients", patientData);
   return data;
 };
+
+export const deletePatient = async (id: string) => {
+  const { data } = await api.delete(`/patients/${id}`);
+  return data;
+};

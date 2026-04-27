@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { type ScheduleItem, fetchSchedule, type Patient, type Session } from "./api";
-import { Activity, AlertTriangle, Plus, CheckCircle2, RefreshCw, Calendar, UserPlus } from "lucide-react";
+import { type ScheduleItem, fetchSchedule, type Patient, type Session, deletePatient } from "./api";
+import { Activity, AlertTriangle, Plus, CheckCircle2, RefreshCw, Calendar, UserPlus, Trash2 } from "lucide-react";
 import AddSessionModal from "./components/AddSessionModal";
 import EditSessionModal from "./components/EditSessionModal";
 import AddPatientModal from "./components/AddPatientModal";
@@ -37,6 +37,16 @@ function App() {
   const openAddSession = (patient: Patient) => {
     setSelectedPatient(patient);
     setIsAddSessionModalOpen(true);
+  };
+
+  const handleDeletePatient = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this patient and all their records?")) return;
+    try {
+      await deletePatient(id);
+      loadData();
+    } catch (err) {
+      alert("Failed to delete patient");
+    }
   };
 
   const filteredSchedule = filterAnomalies
@@ -149,7 +159,14 @@ function App() {
               >
                 <div className="flex flex-col lg:flex-row gap-6 lg:items-center">
                   {/* Patient Info Column */}
-                  <div className="lg:w-1/5 border-b lg:border-b-0 lg:border-r border-slate-100 pb-4 lg:pb-0 lg:pr-6">
+                  <div className="lg:w-1/5 border-b lg:border-b-0 lg:border-r border-slate-100 pb-4 lg:pb-0 lg:pr-6 relative">
+                    <button 
+                      onClick={() => handleDeletePatient(item.patient._id)}
+                      className="absolute top-0 right-0 p-1 text-slate-300 hover:text-red-500 transition-colors"
+                      title="Delete Patient"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="text-xl font-black text-slate-800 tracking-tight leading-tight group-hover:text-indigo-600 transition-colors">
                         {item.patient.firstName}<br />{item.patient.lastName}

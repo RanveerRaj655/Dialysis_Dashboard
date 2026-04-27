@@ -35,4 +35,19 @@ router.get("/", async (req, res) => {
   }
 });
 
+// Delete a patient
+router.delete("/:id", async (req, res) => {
+  try {
+    const patient = await Patient.findById(req.params.id);
+    if (!patient) {
+      return res.status(404).json({ error: "Patient not found" });
+    }
+    
+    await Patient.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: "Patient deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Server error deleting patient" });
+  }
+});
+
 export default router;
