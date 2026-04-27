@@ -106,7 +106,9 @@ router.patch("/:id", async (req, res) => {
     res.status(500).json({ error: "Server error updating session" });
   }
 });
-
+// Get schedule and sessions for a date
+router.get("/schedule", async (req, res) => {
+  try {
     // Support historical records via ?date=YYYY-MM-DD
     const queryDate = req.query.date ? new Date(req.query.date as string) : new Date();
     
