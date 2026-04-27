@@ -1,5 +1,6 @@
 import express from "express";
 import { z } from "zod";
+import mongoose from "mongoose";
 import Patient from "../models/Patient";
 
 const router = express.Router();
@@ -38,14 +39,25 @@ router.get("/", async (req, res) => {
 // Delete a patient
 router.delete("/:id", async (req, res) => {
   try {
-    const patient = await Patient.findById(req.params.id);
+    const { id } = req.params;
+    console.log(`BACKEND: Attempting to delete patient with ID: ${id}`);
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.log(`BACKEND: Invalid ObjectId format: ${id}`);
+      return res.status(400).json({ error: "Invalid patient ID format" });
+    }
+
+    const patient = await Patient.findById(id);
     if (!patient) {
+      console.log(`BACKEND: Patient not found in DB: ${id}`);
       return res.status(404).json({ error: "Patient not found" });
     }
     
-    await Patient.findByIdAndDelete(req.params.id);
+    await Patient.findByIdAndDelete(id);
+    console.log(`BACKEND: Successfully deleted patient: ${id}`);
     res.status(200).json({ message: "Patient deleted successfully" });
   } catch (error) {
+    console.error("BACKEND: Delete error:", error);
     res.status(500).json({ error: "Server error deleting patient" });
   }
 });

@@ -93,7 +93,7 @@ function App() {
                 }`}
             >
               <AlertTriangle className={`w-3.5 h-3.5 ${filterAnomalies ? "animate-pulse" : ""}`} />
-              {filterAnomalies ? "Issues" : "All"}
+              {filterAnomalies ? "Show All Records" : "Show Issues Only"}
             </button>
             <button
               onClick={loadData}
