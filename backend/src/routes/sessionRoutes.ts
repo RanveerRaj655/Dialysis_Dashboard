@@ -107,22 +107,20 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-// Get today's schedule and sessions
-router.get("/schedule", async (req, res) => {
-  try {
-    // For a real app, schedule would be its own collection. 
-    // Here we generate it by returning all patients + their latest session today.
-    // Given the prompt: "Fetch today's schedule and sessions for a given unit (in-memory schedule or simple collection is acceptable)."
+    // Support historical records via ?date=YYYY-MM-DD
+    const queryDate = req.query.date ? new Date(req.query.date as string) : new Date();
     
-    // Use last 24 hours instead of calendar today to handle overnight shifts and timezone rollovers
-    const now = new Date();
-    const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
-    const tomorrow = new Date(now.getTime() + (24 * 60 * 60 * 1000));
+    // Set up the time window for the requested date
+    const startOfRange = new Date(queryDate);
+    startOfRange.setHours(0, 0, 0, 0);
+    
+    const endOfRange = new Date(queryDate);
+    endOfRange.setHours(23, 59, 59, 999);
 
     const patients = await Patient.find().lean();
     
     const sessionsToday = await Session.find({
-      startTime: { $gte: twentyFourHoursAgo, $lt: tomorrow }
+      startTime: { $gte: startOfRange, $lte: endOfRange }
     }).sort({ startTime: 1 }).lean();
 
     // Map sessions to patients with extremely robust ID and Case matching

@@ -34,8 +34,10 @@ export interface ScheduleItem {
   session: Session | null;
 }
 
-export const fetchSchedule = async (): Promise<ScheduleItem[]> => {
-  const { data } = await api.get("/sessions/schedule");
+export const fetchSchedule = async (date?: string): Promise<ScheduleItem[]> => {
+  const { data } = await api.get("/sessions/schedule", {
+    params: { date }
+  });
   return data;
 };
 
