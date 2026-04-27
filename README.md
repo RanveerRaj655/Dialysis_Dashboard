@@ -90,31 +90,6 @@ Dialysis_Dashboard/
 
 ---
 
-## 🚀 Deployment Guide (Vercel)
-
-This project is structured as a monorepo. For the best experience, we recommend deploying the **Frontend to Vercel** and the **Backend to Render/Railways**.
-
-### Deploying Frontend to Vercel
-1. Push your code to GitHub.
-2. Go to [Vercel](https://vercel.com) and click **"Add New Project"**.
-3. Import this repository.
-4. Set the **Root Directory** to `frontend`.
-5. Add an Environment Variable:
-   - `VITE_API_URL`: Your deployed backend URL (e.g., `https://your-api.onrender.com/api`).
-6. Click **Deploy**.
-
-### Deploying Backend (Recommended: Render)
-1. Go to [Render.com](https://render.com).
-2. Create a new **Web Service**.
-3. Set the **Root Directory** to `backend`.
-4. Build Command: `npm install && npm run build` (if using build) or just `npm install`.
-5. Start Command: `npm run dev` (or `node dist/index.js` if built).
-6. Add Environment Variables:
-   - `MONGO_URI`: Your MongoDB connection string.
-   - `PORT`: 5000.
-
----
-
 ## 📖 API Documentation
 
 ### Patients
