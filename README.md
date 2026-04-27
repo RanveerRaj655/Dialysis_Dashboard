@@ -1,53 +1,82 @@
-# Dialysis Tracker
+# Dialysis Tracker Dashboard
 
-A full-stack application (Express + React/Vite + MongoDB) designed specifically for tracking dialysis patient sessions and automatically detecting potentially unsafe clinical anomalies.
+![Dashboard Preview](./dashboard_screenshot.png)
 
-## Setup Instructions
+A professional, full-stack clinical dashboard (Express + React + MongoDB) designed for dialysis units to track patient sessions and automatically detect safety anomalies in real-time.
+
+---
+
+## 🚀 Core Features
+
+### 🏥 Clinical Workflow
+- **Real-time Session Tracking**: Monitor active dialysis sessions (Pre-weight, Post-weight, BP, and Runtime).
+- **Manual Patient Registration**: Nurses can register new patients directly from the dashboard if they are not pre-assigned.
+- **Patient Management**: Full control to add or delete patients from the clinical log.
+
+### 🔍 Safety & Anomaly Detection
+- **Automatic Alerts**: The system automatically detects and flags:
+  - **High IDWG**: Interdialytic Weight Gain > 5% of dry weight.
+  - **Hypertension**: Post-dialysis Systolic BP > 160 mmHg.
+  - **Session Variance**: Sessions shorter than 3 hours or longer than 5 hours.
+- **Visual Warnings**: Clinical issues are highlighted with red alerts for immediate nurse attention.
+
+### 📅 Data Management
+- **Historical Records**: Use the integrated Date Picker to view session logs from any previous date.
+- **Strict Date Visibility**: Patients only appear on dates relevant to their registration or treatment, keeping the daily log clean.
+- **Live Sync**: Refresh data instantly without reloading the page.
+
+### 🎨 Premium UI/UX
+- **Compact Card Design**: Optimized layout to fit multiple patient records on a single screen.
+- **Responsive Interface**: Works seamlessly on clinic tablets and desktop monitors.
+- **Glassmorphic Aesthetics**: Modern, clean design using Tailwind CSS and Lucide icons.
+
+---
+
+## 🏗 Project Architecture
+
+```text
+Dialysis_Dashboard/
+├── backend/
+│   ├── src/
+│   │   ├── models/           # Mongoose Schemas (Patient, Session)
+│   │   ├── routes/           # Express API Endpoints
+│   │   ├── utils/            # Clinical Rules Engine (Anomaly Detection)
+│   │   └── index.ts          # Server Entry Point
+│   └── package.json          # Node.js dependencies & scripts
+├── frontend/
+│   ├── src/
+│   │   ├── components/       # Reusable UI (AddPatient, AddSession modals)
+│   │   ├── api.ts            # Axios configuration & API functions
+│   │   ├── App.tsx           # Main Dashboard Logic & Layout
+│   │   └── index.css         # Global styles & design system
+│   └── package.json          # Vite & React configuration
+└── README.md                 # Project documentation
+```
+
+---
+
+## ⚙️ Setup Instructions
 
 ### Prerequisites
-- Node.js (v18+)
-- MongoDB (running locally on default port 27017 or use a `.env` in `backend/` with `MONGO_URI`)
+- **Node.js** (v18+)
+- **MongoDB** (Local or Atlas)
 
 ### Backend Setup
 1. `cd backend`
 2. `npm install`
-3. `npm run seed` (Seeds the database with three mock patients)
-4. `npm run dev` (Runs on `http://localhost:5000`)
+3. Create a `.env` file with `MONGO_URI` (optional, defaults to local).
+4. `npm run seed` (to populate initial patient data).
+5. `npm run dev` (Starts on `http://localhost:5000`).
 
 ### Frontend Setup
-1. Open a new terminal.
-2. `cd frontend`
-3. `npm install`
-4. `npm run dev` (Runs on Vite default, usually `http://localhost:5173`)
+1. `cd frontend`
+2. `npm install`
+3. `npm run dev` (Starts on `http://localhost:5173`).
 
 ---
 
-## 📌 Clinical Assumptions & Trade-offs
+## 📌 Clinical Logic & Assumptions
 
-I made several intentional decisions regarding what constitutes an "anomaly." To prevent scattered "magic numbers," these thresholds are localized functionally in `backend/config/thresholds.ts`.
-
-1. **Excess Interdialytic Weight Gain (IDWG) -> >5% of Dry Weight**
-   - *Assumption*: A standard clinical guideline considers weight gain between treatments dangerous if it exceeds 5% of their prescribed dry weight, risking fluid overload on the heart.
-   - *Logic*: `((preWeight - dryWeight) / dryWeight) * 100 > 5`
-
-2. **High Post-Dialysis Systolic BP -> >160 mmHg**
-   - *Assumption*: Dialysis inherently removes fluid, which usually immediately *lowers* blood pressure. If a patient is leaving the clinic with a systolic BP greater than 160 mmHg, it indicates inadequate fluid removal or hypertension that must be treated.
-
-3. **Abnormal Session Duration -> <180 mins OR >300 mins**
-   - *Assumption*: A standard hemodialysis session typically lasts 4 hours (240 mins). Variations of +/- 1 hour were deemed abnormal. A session shorter than 3 hours risks inadequate toxin clearance, while longer than 5 hours indicates complications or highly resistant fluid removal.
-
-## 🏗 Modeling & Architecture
-
-### Entities & Contracts
-The code uses strict schema adherence via **Zod** middleware in Express and **Mongoose** for MongoDB schemas:
-- **Patient**: Represents static demographic/clinical state (notably `dryWeight`).
-- **Session**: Represents a discrete event linked `1:Many` to a Patient. It tracks temporal start/end bounds, pre/post vitals, and arrays of dynamically calculated `anomalies`.
-
-### Separation of Concerns
-- **Frontend** is completely decoupled. UI State is handled Reactively. Data points are strictly fetched dynamically.
-- **Anomaly Detection Module**: (`backend/src/utils/anomalyDetector.ts`). Anomalies are strictly evaluated at the boundary *before* insertion into the database. This allows other engineers to easily replace or augment the ruleset without digging into route-handling logic.
-
-### Failure Modes & Resiliency
-- **Input Validation**: All incoming REST traffic is parsed via Zod. Missing or out-of-bounds parameters will instantly drop the request and return a standard `HTTP 400` describing the specific field error.
-- **Empty States**: The Frontend renders specific zero-content states ("No patients match the current view", "Not Started").
-- **API Errors**: Surfaced to nurses via non-intrusive UI alerts, allowing them to explicitly "Try Again" without losing unsaved form states where applicable.
+1. **Weight Gain**: `((preWeight - dryWeight) / dryWeight) * 100 > 5%`.
+2. **Hypertension**: Systolic BP > 160 mmHg post-treatment.
+3. **Session Integrity**: Ideal clearance achieved between 180 and 300 minutes.
